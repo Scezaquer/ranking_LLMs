@@ -201,7 +201,7 @@ def visualize_winrate(matrix, title, filename):
                       title_y=0.07, title_x=0.5)
     fig.update_traces(hovertemplate="Model A: %{y}<br>Model B: %{x}<br>Fraction of A Wins: %{z}<extra></extra>")
 
-    fig.write_image(f"ranking_llms/{filename}.png")
+    fig.write_image(f"ranking_LLMs/figures/{filename}.png")
 
 
 visualize_winrate(winrate_matrix, title="True winrates on test set", filename="true_winrates")
