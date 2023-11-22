@@ -20,10 +20,22 @@ def str_to_outcome(s: str):
     return (0.5, 0.5)
 
 
+def str_to_zero_sum(s: str):
+    """Turn the string describing the outcome into a zero-sum interac"""
+    if s == "model_a":
+        return (1, -1)
+    if s == "model_b":
+        return (-1, 1)
+    return (0, 0)
+
+
 # Import tournament dataset.
 # Originally from https://lmsys.org/blog/2023-05-03-arena/
 
-path = f"{dirname(__file__)}/clean_battle_20230717.json"
+FILENAME = "gpt4_pair-00000-of-00001-c0b431264a82ddc0.json"
+
+path = f"{dirname(__file__)}/datasets/{FILENAME}"
+
 with open(path, 'r') as f:
     file = json.load(f)
 
@@ -39,18 +51,30 @@ file = file[:-round(len(file)/10)]
 # Get a list of players and interactions
 players = set()
 interactions = []
+zero_sum_interactions = []
 
 for match in file:
     # Add the players to the list of contenders if they aren't in already
+    """if match['model_a'] == "oasst-sft-1-pythia-12b"\
+       or match['model_b'] == "oasst-sft-1-pythia-12b":
+        continue"""
+
     players.add(match['model_a'])
     players.add(match['model_b'])
 
     # Turn the outcome to chess notation
     outcome = str_to_outcome(match['winner'])
+    zero_sum_outcome = str_to_zero_sum(match['winner'])
 
     # Store the interaction
     interac = Interaction([match['model_a'], match['model_b']], outcome)
+    zero_sum_interac = Interaction([match['model_a'], match['model_b']], zero_sum_outcome)
     interactions.append(interac)
+    zero_sum_interactions.append(zero_sum_interac)
+
+for match in testing_set:
+    players.add(match['model_a'])
+    players.add(match['model_b'])
 
 # Initialize the elos to 0
 players = list(players)
@@ -69,6 +93,9 @@ melos4 = [MeloRate(0, 1, k=2) for x in players]
 melos10 = [MeloRate(0, 1, k=5) for x in players]
 melos20 = [MeloRate(0, 1, k=10) for x in players]
 
+
+#nashavg = nash_avg(players, zero_sum_interactions)
+
 # Compute the ratings
 elos = elo(players, interactions, elos, k_factor=4)
 bayeselos = bayeselo(players, interactions, bayeselos)
@@ -81,11 +108,10 @@ draws = windrawlose(players, interactions, draws, 0, 1, 0)
 losses = windrawlose(players, interactions, losses, 0, 0, 1)
 played = windrawlose(players, interactions, played, 1, 1, 1)
 # best lr so far: 0.0001, 0.01
-melos2 = mElo(players, interactions, melos2, k=1, iterations=1, lr1=0.0001, lr2=0.01)
-melos4 = mElo(players, interactions, melos4, k=2, iterations=1, lr1=0.0001, lr2=0.01)
-melos10 = mElo(players, interactions, melos10, k=5, iterations=1, lr1=0.0001, lr2=0.01)
-melos20 = mElo(players, interactions, melos20, k=10, iterations=1, lr1=0.0001, lr2=0.01)
-"""nashavg = nash_avg(players, interactions)"""
+melos2 = mElo(players, interactions, melos2, k=1, lr1=0.0001, lr2=0.01)
+melos4 = mElo(players, interactions, melos4, k=2, lr1=0.0001, lr2=0.01)
+melos10 = mElo(players, interactions, melos10, k=5, lr1=0.0001, lr2=0.01)
+melos20 = mElo(players, interactions, melos20, k=10, lr1=0.0001, lr2=0.01)
 
 
 sequential_elo = [EloRate(0) for x in players]
@@ -93,12 +119,25 @@ for match in interactions:
     sequential_elo = elo(players, [match], sequential_elo, k_factor=4)
 
 # Rank the players based on their bayeselo ratings
-players, elos, bayeselos, selo, glickos, glickos2, trueskills, wdl, wins, draws, losses, played, melos2, melos4, melos10, melos20= \
-    [list(t) for t in zip(*sorted(zip(players, elos, bayeselos, sequential_elo, glickos, glickos2, trueskills, wdl, wins, draws, losses, played, melos2, melos4, melos10, melos20), key=lambda x: x[8].mu/x[11].mu, reverse=True))]
+players, elos, bayeselos, selo, glickos, glickos2, trueskills, wdl, wins, \
+    draws, losses, played, melos2, melos4, melos10, melos20 = \
+    [list(t) for t in zip(*sorted(
+        zip(players, elos, bayeselos, sequential_elo, glickos, glickos2,
+            trueskills, wdl, wins, draws, losses, played, melos2, melos4,
+            melos10, melos20),
+        key=lambda x: x[8].mu/x[11].mu if x[11].mu else 0, reverse=True))]
 
 # Print the results
-for p, e, b, se, g, g2, t, wdl_, w, d, l, pl, ml2, ml4, ml10, ml20 in zip(players, elos, bayeselos, selo, glickos, glickos2, trueskills, wdl, wins, draws, losses, played, melos2, melos4, melos10, melos20):
-    print(f"| {p} | {round(b.mu, 1)} | {round(e.mu, 1)} | {round(se.mu, 1)} | {round(g.mu, 1)} | {round(g2.mu, 1)} | {round(t.mu, 1)} | {round(ml2.mu, 5)}  | {round(ml4.mu, 5)}  | {round(ml10.mu, 5)}  | {round(ml20.mu, 5)} | {round(w.mu/pl.mu*100, 1)} | {round(d.mu/pl.mu*100, 1)} | {round(l.mu/pl.mu*100, 1)} | {wdl_.mu} | {w.mu} | {d.mu} | {l.mu} | {pl.mu}")
+for p, e, b, se, g, g2, t, wdl_, w, d, l, pl, ml2, ml4, ml10, ml20 in \
+   zip(players, elos, bayeselos, selo, glickos, glickos2, trueskills, wdl,
+       wins, draws, losses, played, melos2, melos4, melos10, melos20):
+    print(f"| {p} | {round(b.mu, 1)} | {round(e.mu, 1)} | {round(se.mu, 1)} | "
+          f"{round(g.mu, 1)} | {round(g2.mu, 1)} | {round(t.mu, 1)} | "
+          f"{round(ml2.mu, 5)}  | {round(ml4.mu, 5)}  | {round(ml10.mu, 5)}  |"
+          f"{round(ml20.mu, 5)} | {round(w.mu/pl.mu*100 if pl.mu else 0, 1)} |"
+          f"{round(d.mu/pl.mu*100 if pl.mu else 0, 1)} | "
+          f"{round(l.mu/pl.mu*100 if pl.mu else 0, 1)} | {wdl_.mu} | {w.mu} | "
+          f"{d.mu} | {l.mu} | {pl.mu}")
 
 
 """for p, n in zip(players, nashavg):
@@ -201,7 +240,7 @@ def visualize_winrate(matrix, title, filename):
                       title_y=0.07, title_x=0.5)
     fig.update_traces(hovertemplate="Model A: %{y}<br>Model B: %{x}<br>Fraction of A Wins: %{z}<extra></extra>")
 
-    fig.write_image(f"ranking_LLMs/figures/{filename}.png")
+    fig.write_image(f"ranking_LLMs/figures/{FILENAME[:12]}_{filename}.png")
 
 
 visualize_winrate(winrate_matrix, title="True winrates on test set", filename="true_winrates")
