@@ -115,6 +115,7 @@ https://huggingface.co/datasets/lmsys/mt_bench_human_judgments/viewer/default/hu
 
 # Dataset 4
 https://huggingface.co/datasets/lmsys/mt_bench_human_judgments/viewer/default/gpt4_pair
+
 2400 matches
 
 | Model name | BayesElo | Elo | Sequential Elo | Glicko | Glicko 2 | TrueSkill | mElo2 | mElo4 | mElo10 | mElo20 | Winrate | Drawrate | Loserate | WDL | Wins | Draws | Losses | Total played |
@@ -140,6 +141,7 @@ https://huggingface.co/datasets/lmsys/mt_bench_human_judgments/viewer/default/gp
 
 # Sum of all datasets
 Not checking for redundancy
+
 122693 matches
 
 | Model name | BayesElo | Elo | Sequential Elo | Glicko | Glicko 2 | TrueSkill | mElo2 | mElo4 | mElo10 | mElo20 | Winrate | Drawrate | Loserate | WDL | Wins | Draws | Losses | Total played |
