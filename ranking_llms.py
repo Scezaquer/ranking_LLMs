@@ -252,7 +252,7 @@ visualize_winrate(
     title="Winrates predicted by Bayeselo on test set",
     filename="bayeselo_prediction")
 visualize_winrate(
-    glicko_prediction_matrix, 
+    glicko_prediction_matrix,
     title="Winrates predicted by Glicko on test set",
     filename="glicko_prediction")
 visualize_winrate(
